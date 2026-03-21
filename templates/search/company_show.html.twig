@@ -1,0 +1,82 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Fiche entreprise {{ company.nomComplet }}{% endblock %}
+
+{% block body %}
+<div class="container" style="padding:32px 0;">
+    {% if from is defined and from is not empty %}
+        <a href="{{ path('app_search', from) }}" class="btn btn-outline" style="margin-bottom:16px;">← Retour à la recherche</a>
+    {% else %}
+        <a href="{{ path('app_search') }}" class="btn btn-outline" style="margin-bottom:16px;">← Retour à la recherche</a>
+    {% endif %}
+
+    <div class="filter-panel" style="position:static; max-width:900px; margin:0 auto;">
+        <h1 style="font-size:1.6rem; margin-bottom:4px;">{{ company.nomComplet }}</h1>
+        <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px;">SIREN {{ company.siren }}</div>
+
+        <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:20px; align-items:flex-start;">
+            <div>
+                <h2 style="font-size:0.9rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:8px;">Informations principales</h2>
+                <p><strong>Adresse du siège</strong><br>{{ company.adresseSiege }}</p>
+                <p>
+                    <strong>Code postal / ville</strong><br>
+                    {{ company.codePostalSiege }} {{ company.villeSiege }}
+                </p>
+                <p>
+                    <strong>Date de création</strong><br>
+                    {{ company.dateCreation ? company.dateCreation|date('d/m/Y') : 'Non renseignée' }}
+                </p>
+                <p>
+                    <strong>Forme juridique</strong><br>
+                    {{ company.libelleNatureJuridique }}
+                </p>
+                {% if company.activitePrincipale %}
+                    <p>
+                        <strong>Secteur d'activité</strong><br>
+                        {{ company.libelleActivitePrincipale }} (NAF {{ company.activitePrincipale }})
+                    </p>
+                {% endif %}
+                <p>
+                    <strong>Effectif salarié</strong><br>
+                    {{ company.libelleEffectif }}
+                </p>
+            </div>
+            <div>
+                <h2 style="font-size:0.9rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:8px;">Liens utiles</h2>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <a href="https://www.google.com/search?q={{ company.nomComplet|url_encode }}" target="_blank" rel="noopener" class="btn btn-outline">🌐 Chercher le site web</a>
+                    <a href="https://www.pappers.fr/entreprise/{{ company.siren }}" target="_blank" rel="noopener" class="btn btn-outline">Pappers →</a>
+                    <a href="https://annuaire-entreprises.data.gouv.fr/entreprise/{{ company.siren }}" target="_blank" rel="noopener" class="btn btn-outline">Annuaire Entreprises →</a>
+                </div>
+            </div>
+        </div>
+
+        {% set dirigeantsPhysiques = company.dirigeantsPhysiques %}
+        {% if dirigeantsPhysiques is not empty %}
+            <div class="dirigeants-section" style="margin-top:24px;">
+                <div class="dirigeants-title">👤 Dirigeants identifiés</div>
+                <div class="dirigeants-list">
+                    {% for dirigeant in dirigeantsPhysiques %}
+                        <div class="dirigeant-chip">
+                            <div class="dirigeant-avatar">
+                                {{ (dirigeant.prenoms ?? 'N') | slice(0, 1) | upper }}{{ (dirigeant.nom ?? 'N') | slice(0, 1) | upper }}
+                            </div>
+                            <div>
+                                <div class="dirigeant-name" style="display:flex;align-items:center;gap:4px;">
+                                    {{ dirigeant.nomComplet }}
+                                    <a href="https://www.linkedin.com/search/results/people/?keywords={{ (dirigeant.nomComplet ~ ' ' ~ company.nomComplet) | url_encode }}" target="_blank" rel="noopener" title="Chercher sur LinkedIn" style="text-decoration:none;display:inline-flex;align-items:center;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="#0a66c2"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                                    </a>
+                                </div>
+                                {% if dirigeant.qualite %}
+                                    <div class="dirigeant-role">{{ dirigeant.qualite }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

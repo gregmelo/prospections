@@ -1,0 +1,898 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Recherche d'entreprises — ProspectPro{% endblock %}
+
+{% block extra_styles %}
+/* ─── HERO ─── */
+.hero {
+    padding: 40px 0 32px;
+    text-align: center;
+}
+.hero h1 {
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 700;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+}
+.hero p { color: var(--text-secondary); font-size: 1rem; }
+
+/* ─── MAIN LAYOUT ─── */
+.search-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    align-items: start;
+    padding-bottom: 48px;
+}
+@media (max-width: 900px) {
+    .search-layout { grid-template-columns: 1fr; }
+}
+
+/* ─── FILTER PANEL ─── */
+.filter-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    position: sticky;
+    top: 80px;
+}
+.filter-panel h2 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+.filter-group { margin-bottom: 18px; }
+.filter-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+.filter-help {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+.filter-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+.filter-actions .btn { justify-content: center; }
+
+/* ─── RADIO INLINE ─── */
+.radio-row { display: flex; gap: 12px; margin-top: 4px; }
+.radio-row label { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; font-weight: 400; margin: 0; }
+.radio-row input[type=radio] { accent-color: var(--accent-1); }
+
+/* ─── RESULTS AREA ─── */
+.results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.results-count {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+.results-count strong { color: var(--text-primary); font-size: 1.1rem; }
+
+.results-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.results-tools .sort-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+}
+.results-tools .sort-wrapper label {
+    color: var(--text-muted);
+}
+
+.facets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.facet-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 0.8rem;
+}
+.facet-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+.facet-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.facet-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.fav-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 2px 4px;
+    color: var(--text-muted);
+    transition: transform 0.1s ease, color 0.1s ease;
+}
+.fav-btn.is-favorite {
+    color: #facc15;
+    transform: scale(1.1);
+}
+
+/* ─── ACTIVE FILTERS ─── */
+.active-filters {
+    margin-bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.filter-chip {
+    font-size: 0.72rem;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(79,70,229,0.12);
+    border: 1px solid rgba(79,70,229,0.25);
+    color: var(--text-secondary);
+}
+
+/* ─── LOADING OVERLAY ─── */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+.loading-overlay .spinner {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 3px solid rgba(148,163,184,0.4);
+    border-top-color: #6366f1;
+    animation: spin 0.6s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+body.is-loading #search-btn {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+/* ─── COMPANY CARD ─── */
+.company-grid { display: flex; flex-direction: column; gap: 14px; }
+.company-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+.company-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--accent-gradient);
+    opacity: 0;
+    transition: var(--transition);
+}
+.company-card:hover { background: var(--bg-card-hover); border-color: rgba(79,70,229,0.3); transform: translateX(2px); }
+.company-card:hover::before { opacity: 1; }
+
+.card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.card-name { font-size: 1rem; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+.card-siren { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; font-family: monospace; }
+.card-badges { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+.badge {
+    font-size: 0.68rem;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 99px;
+    white-space: nowrap;
+}
+.badge-naf { background: rgba(79,70,229,0.15); color: #a5b4fc; border: 1px solid rgba(79,70,229,0.25); }
+.badge-size { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.2); }
+.badge-type { background: rgba(16,185,129,0.1); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.2); }
+
+.card-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+@media (max-width: 600px) { .card-body { grid-template-columns: 1fr; } }
+
+.card-info-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 2px; }
+.card-info-value { font-size: 0.85rem; color: var(--text-secondary); }
+
+/* ─── DIRIGEANTS ─── */
+.dirigeants-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.dirigeants-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 8px; }
+.dirigeants-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.dirigeant-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(79,70,229,0.08);
+    border: 1px solid rgba(79,70,229,0.18);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+}
+.dirigeant-avatar {
+    width: 28px; height: 28px;
+    background: var(--accent-gradient);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700;
+    color: #fff; flex-shrink: 0;
+}
+.dirigeant-name { font-size: 0.8rem; font-weight: 500; color: var(--text-primary); }
+.dirigeant-role { font-size: 0.68rem; color: var(--text-muted); }
+
+/* Card footer */
+.card-footer-row {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.card-date { font-size: 0.75rem; color: var(--text-muted); }
+.card-links { display: flex; gap: 8px; }
+.card-link {
+    font-size: 0.75rem;
+    color: var(--accent-1);
+    text-decoration: none;
+    padding: 4px 10px;
+    background: rgba(79,70,229,0.08);
+    border-radius: 6px;
+    border: 1px solid rgba(79,70,229,0.2);
+    transition: var(--transition);
+}
+.card-link:hover { background: rgba(79,70,229,0.18); }
+
+/* ─── EMPTY / LOADING ─── */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+.empty-state .emoji { font-size: 3rem; display: block; margin-bottom: 12px; }
+.empty-state h3 { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 6px; }
+
+/* ─── PAGINATION ─── */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+}
+.page-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 38px; height: 38px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: var(--transition);
+    font-family: inherit;
+}
+.page-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); border-color: rgba(79,70,229,0.3); }
+.page-btn.active { background: var(--accent-gradient); color: #fff; border-color: transparent; font-weight: 600; }
+.page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="hero">
+        <h1>Trouver des entreprises à prospecter</h1>
+        <p>Sourcez des leads qualifiés grâce aux données officielles du gouvernement français</p>
+    </div>
+
+    {{ form_start(form, {'attr': {'id': 'search-form', 'novalidate': 'novalidate'}}) }}
+    {{ form_widget(form.page) }}
+
+    <div class="search-layout">
+        {# ─── FILTER PANEL ─── #}
+        <aside>
+            <div class="filter-panel">
+                <h2>🎯 Filtres de recherche</h2>
+
+                <div class="filter-group">
+                    {{ form_label(form.code_postal) }}
+                    {{ form_widget(form.code_postal) }}
+                    <div class="filter-help">{{ form_help(form.code_postal) }}</div>
+                    {{ form_errors(form.code_postal) }}
+                </div>
+
+                <div class="filter-group">
+                    {{ form_label(form.departement) }}
+                    {{ form_widget(form.departement) }}
+                    <div class="filter-help">{{ form_help(form.departement) }}</div>
+                </div>
+
+                <div class="filter-group">
+                    {{ form_label(form.mots_cles) }}
+                    {{ form_widget(form.mots_cles) }}
+                </div>
+
+                <div class="filter-group">
+                    {{ form_label(form.code_naf) }}
+                    {{ form_widget(form.code_naf, {'attr': {'list': 'naf-list'}}) }}
+                    <datalist id="naf-list">
+                        <option value="01">01 - Culture et production animale, chasse et services annexes</option>
+                        <option value="02">02 - Sylviculture et exploitation forestière</option>
+                        <option value="03">03 - Pêche et aquaculture</option>
+                        <option value="05">05 - Extraction de houille et de lignite</option>
+                        <option value="06">06 - Extraction d'hydrocarbures</option>
+                        <option value="07">07 - Extraction de minerais métalliques</option>
+                        <option value="08">08 - Autres industries extractives</option>
+                        <option value="09">09 - Services de soutien aux industries extractives</option>
+                        <option value="10">10 - Industries alimentaires</option>
+                        <option value="11">11 - Fabrication de boissons</option>
+                        <option value="12">12 - Fabrication de produits à base de tabac</option>
+                        <option value="13">13 - Fabrication de textiles</option>
+                        <option value="14">14 - Industrie de l'habillement</option>
+                        <option value="15">15 - Industrie du cuir et de la chaussure</option>
+                        <option value="16">16 - Travail du bois et fabrication d'articles en bois</option>
+                        <option value="17">17 - Industrie du papier et du carton</option>
+                        <option value="18">18 - Imprimerie et reproduction d'enregistrements</option>
+                        <option value="19">19 - Cokéfaction et raffinage</option>
+                        <option value="20">20 - Industrie chimique</option>
+                        <option value="21">21 - Industrie pharmaceutique</option>
+                        <option value="22">22 - Fabrication de produits en caoutchouc et en plastique</option>
+                        <option value="23">23 - Fabrication d'autres produits minéraux non métalliques</option>
+                        <option value="24">24 - Métallurgie</option>
+                        <option value="25">25 - Fabrication de produits métalliques, à l'exception des machines</option>
+                        <option value="26">26 - Fabrication de produits informatiques, électroniques et optiques</option>
+                        <option value="27">27 - Fabrication d'équipements électriques</option>
+                        <option value="28">28 - Fabrication de machines et équipements n.c.a.</option>
+                        <option value="29">29 - Industrie automobile</option>
+                        <option value="30">30 - Fabrication d'autres matériels de transport</option>
+                        <option value="31">31 - Fabrication de meubles</option>
+                        <option value="32">32 - Autres industries manufacturières</option>
+                        <option value="33">33 - Réparation et installation de machines et d'équipements</option>
+                        <option value="35">35 - Production et distribution d'électricité, de gaz, de vapeur</option>
+                        <option value="36">36 - Captage, traitement et distribution d'eau</option>
+                        <option value="37">37 - Collecte et traitement des eaux usées</option>
+                        <option value="38">38 - Collecte, traitement et élimination des déchets</option>
+                        <option value="39">39 - Dépollution et autres services de gestion des déchets</option>
+                        <option value="41">41 - Construction de bâtiments</option>
+                        <option value="42">42 - Génie civil</option>
+                        <option value="43">43 - Travaux de construction spécialisés</option>
+                        <option value="45">45 - Commerce et réparation d'automobiles et de motocycles</option>
+                        <option value="46">46 - Commerce de gros, à l'exception des automobiles</option>
+                        <option value="47">47 - Commerce de détail, à l'exception des automobiles</option>
+                        <option value="49">49 - Transports terrestres et transport par conduites</option>
+                        <option value="50">50 - Transports par eau</option>
+                        <option value="51">51 - Transports aériens</option>
+                        <option value="52">52 - Entreposage et services auxiliaires des transports</option>
+                        <option value="53">53 - Activités de poste et de courrier</option>
+                        <option value="55">55 - Hébergement</option>
+                        <option value="56">56 - Restauration</option>
+                        <option value="58">58 - Édition</option>
+                        <option value="59">59 - Production de films, vidéo, programmes de TV, enregistrement sonore</option>
+                        <option value="60">60 - Programmation et diffusion</option>
+                        <option value="61">61 - Télécommunications</option>
+                        <option value="62">62 - Programmation, conseil et autres activités informatiques</option>
+                        <option value="63">63 - Services d'information</option>
+                        <option value="64">64 - Activités financières, hors assurance et caisses de retraite</option>
+                        <option value="65">65 - Assurance</option>
+                        <option value="66">66 - Activités auxiliaires de services financiers et d'assurance</option>
+                        <option value="68">68 - Activités immobilières</option>
+                        <option value="69">69 - Activités juridiques et comptables</option>
+                        <option value="70">70 - Activités des sièges sociaux ; conseil de gestion</option>
+                        <option value="71">71 - Activités d'architecture et d'ingénierie ; contrôle technique</option>
+                        <option value="72">72 - Recherche-développement scientifique</option>
+                        <option value="73">73 - Publicité et études de marché</option>
+                        <option value="74">74 - Autres activités spécialisées, scientifiques et techniques</option>
+                        <option value="75">75 - Activités vétérinaires</option>
+                        <option value="77">77 - Activités de location et location-bail</option>
+                        <option value="78">78 - Activités liées à l'emploi</option>
+                        <option value="79">79 - Agences de voyage, voyagistes et services de réservation</option>
+                        <option value="80">80 - Enquêtes et sécurité</option>
+                        <option value="81">81 - Services relatifs aux bâtiments et aménagement paysager</option>
+                        <option value="82">82 - Activités administratives et de soutien de bureau</option>
+                        <option value="84">84 - Administration publique et défense ; sécurité sociale</option>
+                        <option value="85">85 - Enseignement</option>
+                        <option value="86">86 - Activités pour la santé humaine</option>
+                        <option value="87">87 - Hébergement médico-social et social</option>
+                        <option value="88">88 - Action sociale sans hébergement</option>
+                        <option value="90">90 - Activités créatives, artistiques et de spectacle</option>
+                        <option value="91">91 - Bibliothèques, archives, musées et autres activités culturelles</option>
+                        <option value="92">92 - Organisation de jeux de hasard et d'argent</option>
+                        <option value="93">93 - Activités sportives, récréatives et de loisirs</option>
+                        <option value="94">94 - Activités des organisations associatives</option>
+                        <option value="95">95 - Réparation d'ordinateurs et de biens personnels</option>
+                        <option value="96">96 - Autres services personnels</option>
+                        <option value="97">97 - Activités des ménages en tant qu'employeurs de personnel</option>
+                        <option value="98">98 - Activités indifférenciées des ménages</option>
+                        <option value="99">99 - Activités des organisations et organismes extraterritoriaux</option>
+                    </datalist>
+                    <div class="filter-help">{{ form_help(form.code_naf) }}</div>
+                </div>
+
+                <div class="filter-group">
+                    <label>Année de création</label>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        {{ form_widget(form.annee_creation_min, {'attr': {'style': 'flex:1'}}) }}
+                        <span style="color:var(--text-muted);font-size:0.8rem;">→</span>
+                        {{ form_widget(form.annee_creation_max, {'attr': {'style': 'flex:1'}}) }}
+                    </div>
+                    {{ form_errors(form.annee_creation_min) }}
+                    {{ form_errors(form.annee_creation_max) }}
+                </div>
+
+                <div class="filter-group">
+                    {{ form_label(form.tranche_effectif) }}
+                    {{ form_widget(form.tranche_effectif) }}
+                </div>
+
+                <div class="filter-group">
+                    {{ form_label(form.categorie_juridique) }}
+                    {{ form_widget(form.categorie_juridique) }}
+                </div>
+
+                <div class="filter-group">
+                    {{ form_label(form.exclure_associations) }}
+                    <div class="radio-row">
+                        {% for child in form.exclure_associations %}
+                            <label>
+                                {{ form_widget(child) }}
+                                {{ form_label(child) }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary" id="search-btn">
+                        🔍 Rechercher
+                    </button>
+                    {% if searched and result and result.totalResults > 0 %}
+                        <a href="{{ path('app_export_csv') }}?{{ app.request.queryString }}" class="btn btn-success" id="export-btn">
+                            📥 Exporter en CSV
+                        </a>
+                    {% endif %}
+                    <a href="{{ path('app_search') }}" class="btn btn-outline" id="reset-btn">
+                        ✕ Réinitialiser
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        {# ─── RESULTS ─── #}
+        <section>
+            {% if not searched %}
+                <div class="empty-state">
+                    <span class="emoji">🏢</span>
+                    <h3>Lancez votre première recherche</h3>
+                    <p>Renseignez au moins un filtre pour trouver des entreprises à prospecter.</p>
+                </div>
+
+            {% elseif result is not null and result.hasError %}
+                <div class="empty-state">
+                    <span class="emoji">⚠️</span>
+                    <h3>Erreur lors de la recherche</h3>
+                    <p>{{ result.errorMessage ?? "Une erreur technique est survenue lors de l'appel à l'API des entreprises." }}</p>
+                    <p style="margin-top: 8px; font-size: 0.85rem;">
+                        Vous pouvez réessayer dans quelques instants ou alléger vos filtres.
+                    </p>
+                </div>
+
+            {% elseif result is null or result.totalResults == 0 %}
+                <div class="empty-state">
+                    <span class="emoji">😕</span>
+                    <h3>Aucun résultat</h3>
+                    <p>Essayez d'élargir vos critères de recherche (moins de filtres, zone géographique plus grande).</p>
+                </div>
+
+            {% else %}
+                {% if filters is defined and filters is not empty %}
+                    <div class="active-filters">
+                        {% if filters.code_postal is not empty %}
+                            <span class="filter-chip">Code postal : {{ filters.code_postal }}</span>
+                        {% endif %}
+                        {% if filters.departement is not empty %}
+                            <span class="filter-chip">Département : {{ filters.departement }}</span>
+                        {% endif %}
+                        {% if filters.mots_cles is not empty %}
+                            <span class="filter-chip">Recherche : {{ filters.mots_cles }}</span>
+                        {% endif %}
+                        {% if filters.code_naf is not empty %}
+                            <span class="filter-chip">NAF / APE : {{ filters.code_naf }}</span>
+                        {% endif %}
+                        {% if filters.annee_creation_min is not empty or filters.annee_creation_max is not empty %}
+                            <span class="filter-chip">Création :
+                                {% if filters.annee_creation_min is not empty %} {{ filters.annee_creation_min }}{% else %}…{% endif %}
+                                →
+                                {% if filters.annee_creation_max is not empty %} {{ filters.annee_creation_max }}{% else %}…{% endif %}
+                            </span>
+                        {% endif %}
+                        {% if filters.tranche_effectif is not empty %}
+                            <span class="filter-chip">Effectif : {{ filters.tranche_effectif }}</span>
+                        {% endif %}
+                        {% if filters.categorie_juridique is not empty %}
+                            <span class="filter-chip">Forme jur. : {{ filters.categorie_juridique }}</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                {% if stats is not null %}
+                    <div class="facets">
+                        {% if stats.by_effectif is defined and stats.by_effectif is not empty %}
+                            <div class="facet-box">
+                                <div class="facet-title">Répartition par effectif</div>
+                                <ul class="facet-list">
+                                    {% for label, count in stats.by_effectif|slice(0, 4) %}
+                                        <li><span>{{ label }}</span><span>{{ count }}</span></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        {% if stats.by_departement is defined and stats.by_departement is not empty %}
+                            <div class="facet-box">
+                                <div class="facet-title">Top départements</div>
+                                <ul class="facet-list">
+                                    {% for dep, count in stats.by_departement|slice(0, 4) %}
+                                        <li><span>{{ dep }}</span><span>{{ count }}</span></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                <div class="results-header">
+                    <div class="results-count">
+                        <strong>{{ result.totalResults | number_format(0, ',', ' ') }}</strong>
+                        siège{{ result.totalResults > 1 ? 's' : '' }} trouvé{{ result.totalResults > 1 ? 's' : '' }}
+                        — page {{ result.page }}/{{ result.totalPages }}
+                        {% if result.isTruncated %}
+                            <span style="display:inline-block;margin-left:6px;font-size:0.75rem;color:#d97706;">
+                                (résultats tronqués, affinez vos filtres)
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="results-tools">
+                        <div class="sort-wrapper">
+                            {{ form_label(form.sort) }}
+                            {{ form_widget(form.sort) }}
+                        </div>
+                        <button type="button" class="btn btn-outline btn-sm" id="copy-link-btn">🔗 Copier le lien</button>
+                        {% if result.totalResults > 0 %}
+                            <a href="{{ path('app_export_csv') }}?{{ app.request.queryString }}" class="btn btn-success btn-sm" id="export-top">
+                                📥 Export CSV
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="company-grid">
+                    {% for company in result.companies %}
+                        {% set dirigeantsPhysiques = company.dirigeantsPhysiques %}
+                        <article class="company-card" id="company-{{ company.siren }}">
+
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-name">{{ company.nomComplet }}</div>
+                                    <div class="card-siren">SIREN : {{ company.siren }}</div>
+                                </div>
+                                <div class="card-badges">
+                                    <button type="button" class="fav-btn" data-siren="{{ company.siren }}" aria-pressed="false" title="Ajouter aux favoris">★</button>
+                                    {% if company.activitePrincipale %}
+                                        <span class="badge badge-naf">NAF {{ company.activitePrincipale }}</span>
+                                    {% endif %}
+                                    {% if company.trancheEffectifSalarie and company.trancheEffectifSalarie != 'NN' %}
+                                        <span class="badge badge-size">{{ company.libelleEffectif }}</span>
+                                    {% endif %}
+                                    {% if company.categorieEntreprise %}
+                                        <span class="badge badge-type">{{ company.categorieEntreprise }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="card-body">
+                                <div>
+                                    <div class="card-info-label">📍 Adresse siège</div>
+                                    <div class="card-info-value">{{ company.adresseSiege }}</div>
+                                    {% set matchingAddress = company.getFirstMatchingEtablissementAddress %}
+                                    {% if matchingAddress %}
+                                        <div style="font-size: 0.72rem; color: #d97706; margin-top: 4px; padding: 4px 6px; background: rgba(245,158,11,0.1); border-radius: 4px; display: inline-block;">
+                                            💡 Établissement trouvé : {{ matchingAddress }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="card-info-label">⚖️ Forme juridique</div>
+                                    <div class="card-info-value">{{ company.libelleNatureJuridique }}</div>
+                                </div>
+                                {% if company.activitePrincipale %}
+                                    <div>
+                                        <div class="card-info-label">🏢 Secteur d'activité</div>
+                                        <div class="card-info-value" title="Code NAF {{ company.activitePrincipale }}">{{ company.libelleActivitePrincipale }} (NAF {{ company.activitePrincipale }})</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {% if dirigeantsPhysiques | length > 0 %}
+                                <div class="dirigeants-section">
+                                    <div class="dirigeants-title">👤 Dirigeants</div>
+                                    <div class="dirigeants-list">
+                                        {% for dirigeant in dirigeantsPhysiques | slice(0, 4) %}
+                                            <div class="dirigeant-chip">
+                                                <div class="dirigeant-avatar">
+                                                    {{ (dirigeant.prenoms ?? 'N') | slice(0, 1) | upper }}{{ (dirigeant.nom ?? 'N') | slice(0, 1) | upper }}
+                                                </div>
+                                                <div>
+                                                    <div class="dirigeant-name" style="display: flex; align-items: center; gap: 4px;">
+                                                        {{ dirigeant.nomComplet }}
+                                                        <a href="https://www.linkedin.com/search/results/people/?keywords={{ (dirigeant.nomComplet ~ ' ' ~ company.nomComplet) | url_encode }}" target="_blank" rel="noopener" title="Chercher sur LinkedIn" style="text-decoration: none; display: inline-flex; align-items: center;">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="#0a66c2"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                                                        </a>
+                                                    </div>
+                                                    {% if dirigeant.qualite %}
+                                                        <div class="dirigeant-role">{{ dirigeant.qualite }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                        {% if dirigeantsPhysiques | length > 4 %}
+                                            <div class="dirigeant-chip" style="color:var(--text-muted);font-size:0.8rem;">
+                                                + {{ dirigeantsPhysiques | length - 4 }} autres
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <div class="card-footer-row">
+                                <span class="card-date">
+                                    📅 Créée le {{ company.dateCreation ? company.dateCreation | date('d/m/Y') : 'N/A' }}
+                                </span>
+                                <div class="card-links">
+                                    <a href="https://www.google.com/search?q={{ company.nomComplet | url_encode }}" target="_blank" rel="noopener" class="card-link" style="border-color: rgba(16, 185, 129, 0.4); color: #059669; background: rgba(16, 185, 129, 0.05);">
+                                        🌐 Chercher site web
+                                    </a>
+                                    <a href="https://www.pappers.fr/entreprise/{{ company.siren }}" target="_blank" rel="noopener" class="card-link">
+                                        Pappers →
+                                    </a>
+                                    <a href="https://annuaire-entreprises.data.gouv.fr/entreprise/{{ company.siren }}" target="_blank" rel="noopener" class="card-link">
+                                        Annuaire →
+                                    </a>
+                                    <a href="{{ path('app_company_show', app.request.query.all | merge({siren: company.siren})) }}" class="card-link">
+                                        Détails →
+                                    </a>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+
+                {# ─── PAGINATION ─── #}
+                {% if result.totalPages > 1 %}
+                    <nav class="pagination" aria-label="Pagination">
+                        {% if result.page > 1 %}
+                            <button type="button" class="page-btn" onclick="goToPage({{ result.page - 1 }})">← Préc.</button>
+                        {% endif %}
+
+                        {% set start = max(1, result.page - 2) %}
+                        {% set end = min(result.totalPages, result.page + 2) %}
+
+                        {% if start > 1 %}
+                            <button type="button" class="page-btn" onclick="goToPage(1)">1</button>
+                            {% if start > 2 %}<span style="color:var(--text-muted);padding:0 4px;">…</span>{% endif %}
+                        {% endif %}
+
+                        {% for p in start..end %}
+                            <button type="button" class="page-btn {{ p == result.page ? 'active' : '' }}" onclick="goToPage({{ p }})">{{ p }}</button>
+                        {% endfor %}
+
+                        {% if end < result.totalPages %}
+                            {% if end < result.totalPages - 1 %}<span style="color:var(--text-muted);padding:0 4px;">…</span>{% endif %}
+                            <button type="button" class="page-btn" onclick="goToPage({{ result.totalPages }})">{{ result.totalPages }}</button>
+                        {% endif %}
+
+                        {% if result.page < result.totalPages %}
+                            <button type="button" class="page-btn" onclick="goToPage({{ result.page + 1 }})">Suiv. →</button>
+                        {% endif %}
+                    </nav>
+                {% endif %}
+
+            {% endif %}
+        </section>
+    </div>
+    {{ form_end(form) }}
+</div>
+<div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function showLoading() {
+    document.body.classList.add('is-loading');
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.style.display = 'flex';
+}
+
+function goToPage(page) {
+    const form = document.getElementById('search-form');
+    if (!form) return;
+    const pageInput = form.querySelector('input[name="page"]');
+    if (pageInput) {
+        pageInput.value = page;
+    }
+    showLoading();
+    form.submit();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('search-form');
+    if (!form) return;
+
+    const pageInput = form.querySelector('input[name="page"]');
+    const searchBtn = document.getElementById('search-btn');
+
+    form.addEventListener('submit', function () {
+        showLoading();
+        if (searchBtn) {
+            searchBtn.disabled = true;
+            searchBtn.textContent = 'Recherche en cours…';
+        }
+    });
+
+    const autoSubmitSelectors = [
+        'input[name="code_postal"]',
+        'input[name="departement"]',
+        'input[name="mots_cles"]',
+        'input[name="code_naf"]',
+        'input[name="annee_creation_min"]',
+        'input[name="annee_creation_max"]',
+        'select[name="tranche_effectif"]',
+        'select[name="categorie_juridique"]',
+        'select[name="sort"]',
+        'input[name="exclure_associations"]'
+    ];
+
+    const inputs = form.querySelectorAll(autoSubmitSelectors.join(','));
+
+    let debounceTimer = null;
+
+    function triggerAutoSubmit(resetPage) {
+        if (pageInput && resetPage) {
+            pageInput.value = 1;
+        }
+        form.requestSubmit();
+    }
+
+    inputs.forEach(function (input) {
+        const isText = input.tagName === 'INPUT' && (input.type === 'text' || input.type === 'number');
+
+        if (isText) {
+            input.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function () {
+                    triggerAutoSubmit(true);
+                }, 400);
+            });
+        } else {
+            input.addEventListener('change', function () {
+                triggerAutoSubmit(true);
+            });
+        }
+    });
+
+    const copyBtn = document.getElementById('copy-link-btn');
+    if (copyBtn && navigator.clipboard) {
+        copyBtn.addEventListener('click', function () {
+            const initialText = copyBtn.textContent;
+            navigator.clipboard.writeText(window.location.href).then(function () {
+                copyBtn.textContent = 'Lien copié !';
+                setTimeout(function () {
+                    copyBtn.textContent = initialText;
+                }, 2000);
+            });
+        });
+    }
+
+    const FAVORITES_KEY = 'prospection_favorites_sirens';
+
+    function loadFavorites() {
+        try {
+            const raw = localStorage.getItem(FAVORITES_KEY);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveFavorites(list) {
+        try {
+            localStorage.setItem(FAVORITES_KEY, JSON.stringify(list));
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    function syncFavoriteButtons() {
+        const favorites = loadFavorites();
+        const buttons = document.querySelectorAll('.fav-btn');
+        buttons.forEach(function (btn) {
+            const siren = btn.getAttribute('data-siren');
+            const isFav = favorites.includes(siren);
+            btn.classList.toggle('is-favorite', isFav);
+            btn.setAttribute('aria-pressed', isFav ? 'true' : 'false');
+        });
+    }
+
+    syncFavoriteButtons();
+
+    document.addEventListener('click', function (event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+        if (target.classList.contains('fav-btn')) {
+            const siren = target.getAttribute('data-siren');
+            if (!siren) return;
+
+            let favorites = loadFavorites();
+            if (favorites.includes(siren)) {
+                favorites = favorites.filter(function (s) { return s !== siren; });
+            } else {
+                favorites.push(siren);
+            }
+
+            saveFavorites(favorites);
+            syncFavoriteButtons();
+        }
+    });
+});
+</script>
+{% endblock %}

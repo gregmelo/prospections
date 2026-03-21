@@ -1,0 +1,39 @@
+
+Warning: Module "openssl" is already loaded in Unknown on line 0
+--- KEYS ---
+Array
+(
+    [0] => siren
+    [1] => nom_complet
+    [2] => nom_raison_sociale
+    [3] => sigle
+    [4] => nombre_etablissements
+    [5] => nombre_etablissements_ouverts
+    [6] => siege
+    [7] => activite_principale
+    [8] => activite_principale_naf25
+    [9] => categorie_entreprise
+    [10] => caractere_employeur
+    [11] => annee_categorie_entreprise
+    [12] => date_creation
+    [13] => date_fermeture
+    [14] => date_mise_a_jour
+    [15] => date_mise_a_jour_insee
+    [16] => date_mise_a_jour_rne
+    [17] => dirigeants
+    [18] => etat_administratif
+    [19] => nature_juridique
+    [20] => section_activite_principale
+    [21] => tranche_effectif_salarie
+    [22] => annee_tranche_effectif_salarie
+    [23] => statut_diffusion
+    [24] => matching_etablissements
+    [25] => finances
+    [26] => complements
+)
+
+--- SPECIFIC DATA ---
+activite_principale: 68.20B
+libelle_activite_principale: N/A
+libelle_section_activite_principale: N/A
+site_web / site_internet: N/A
